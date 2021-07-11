@@ -2,71 +2,6 @@ Clasificacion de residuos para reciclaje
 ================
 Ma. Lorena Montoya Freire
 
-<style>
-body{
-  line-height: 24px;
-  text-align: justify;
-  font-family: "Arial";
-}
-
-/*
-h1,h2,h3,h4 {
-  font-family: 'Raleway', sans-serif;
-}*/
-
-h2.toc-title{
-  font-size:20px;
-}
-
-h1.title{
-  font-size:30px;
-}
-
-.list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
- color:black;
- background-color: #dde4ed;
-}
-
-div.tocify{
-    width: 47%;
-    max-width: 328px;
-    max-height: 85%;
-}
-
-.toc-content {
-  padding-left:65px;
-}
-
-h3 {
-  background-color: #dde4ed; /* #448fe3;*/
-  text-indent: 10px;
-  font-size:18px;
-  font-weight:bold;
-  padding:3px;
-}
-h4 {
-  text-indent: 10px;
-}
-
-g-table-intro h4 {
-  text-indent: 0px;
-}
-
-caption {
-  color: #686868;
-  text-align:center;
-  font-weight: bold;
-  font-size: 14.75px;
-} 
-
-p.caption_html{
-  color: #686868;
-  text-align:center;
-  font-weight:bold;
-  font-size: 14.75px;
-}
-</style>
-
 ### 1\. Problema a resolver
 
 El fenómeno del cambio climático ha planteado la necesidad de buscar
@@ -96,8 +31,6 @@ personas podrían instalar la aplicación en sus teléfonos de tal manera
 que puedan desechar los residuos en otros contenedores.
 
 ### 2\. Procesamiento de datos
-
-<!--y explicación de las variables y tablas ### 3. Manipulación de datos -->
 
 El conjunto de datos se encuentra en el sitio web de Kaggle [(Garbage
 classification)](https://www.kaggle.com/asdasdasasdas/garbage-classification).
@@ -457,14 +390,7 @@ resultado se agregó 240 imágenes a la clase “trash” dando un total de
 entrenamiento se amplio a 2764 imágenes, mientras que el conjunto de
 prueba contiene 505 imágenes.
 
-<!-- ### 4. Análisis Exploratorio de datos (tablas de frecuencias y gráficos, sólo lo necesario para entender el problema, no se requiere uno para cada variable, pueden usar la librería ggally para resumir)-->
-
 ### 3\. Solución del problema
-
-<!--Breve descripción de cómo se espera resolver el problema (por ejemplo, indicar que el problema es de clasificación supervisada, por lo que se va a usar regresión logística y rnn)
-### 6. Preprocesamiento
-
-### 7. Particionamiento Train-Test y estrategia de remuestreo o de validación-->
 
 El problema a resolver es de clasificación de imágenes las cuales se
 encuentran almacenadas en directorios que permiten distinguer las
@@ -494,10 +420,6 @@ para construir el modelo: un batch\_size de 32, y un número de epochs de
 50. Se realizó pruebas con varios optimizadores incluyendo Adam y RMS,
 pero el mejor resultado se obtuvo utilizando SGD con una tasa de
 aprendizate (learning rate) de 1e-4.
-
-<!--train dataset = rotation, width_shit/, height_range, zoom_range, shear_range, vertical_flip, horizontal_flip-->
-
-<!--Comparación de técnicas -->
 
 ### 5\. Construcción del modelo
 
@@ -769,7 +691,6 @@ Figura 2. Arquitectura creada para clasificar residuos
 
 </div>
 
-<!--(de ser necesario), selección o construcción del modelo final.-->
 
 ### 6\. Resultados finales
 
