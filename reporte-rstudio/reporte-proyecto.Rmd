@@ -1,0 +1,283 @@
+---
+title: 'Clasificación de residuos para reciclaje'
+author: "Lorena Montoya Freire"
+date: ""
+output:
+  html_document: 
+    toc: true
+    toc_float: true
+    theme: cosmo
+    keep_md: true
+  pdf_document: default
+toc-title: "Tabla de contenido"
+#output: rmarkdown::github_document
+#always_allow_html: true
+assets:
+  css:
+  - http://fonts.googleapis.com/css?family=Raleway:300
+  - http://fonts.googleapis.com/css?family=Oxygen
+---
+
+<style>
+body{
+  line-height: 24px;
+  text-align: justify;
+  font-family: "Arial";
+}
+
+/*
+h1,h2,h3,h4 {
+  font-family: 'Raleway', sans-serif;
+}*/
+
+h2.toc-title{
+  font-size:20px;
+}
+
+h1.title{
+  font-size:30px;
+}
+
+.list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
+ color:black;
+ background-color: #dde4ed;
+}
+
+div.tocify{
+    width: 47%;
+    max-width: 328px;
+    max-height: 85%;
+}
+
+.toc-content {
+  padding-left:65px;
+}
+
+h3 {
+  background-color: #dde4ed; /* #448fe3;*/
+  text-indent: 10px;
+  font-size:18px;
+  font-weight:bold;
+  padding:3px;
+}
+h4 {
+  text-indent: 10px;
+}
+
+g-table-intro h4 {
+  text-indent: 0px;
+}
+
+caption {
+  color: #686868;
+  text-align:center;
+  font-weight: bold;
+  font-size: 14.75px;
+} 
+
+p.caption_html{
+  color: #686868;
+  text-align:center;
+  font-weight:bold;
+  font-size: 14.75px;
+}
+</style>
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(kableExtra)
+library(reticulate)
+library(ggplot2)
+library(gridExtra)
+library(grid)
+library(grDevices)
+
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+### 1. Problema a resolver
+
+El fenómeno del cambio climático ha planteado la necesidad de buscar estrategias para contrarrestar sus efectos, entre las cuales se encuentra el reciclaje. Este forma parte de lo que se denomina una economía circular la cual busca optimizar recursos y así reducir el impacto ambiental. Ciertamente, el reciclaje contribuye al ahorro de recursos naturales al reutilizar los items reciclados y a la reducción de la cantidad de emisiones de gases de efecto invernadero. De acuerdo a  datos oficiales de la ONU, solo se ha reciclado un 9% de todo el desecho plástico producido a lo largo del tiempo, un 12% de los desechos ha sido incinerado, mientras que  el 79%  de lo restante ha terminado en vertederos, basureros e incluso en el medio ambiente.  En la actualidad, varios países han adoptado medidas de reciclaje que involucran la implantación de contenedores para reciclar los residuos. Por otro lado, se han realizado campañas de difusión para que las personas aprendan a separar los residuos y así reciclarlos de una manera eficiente. A pesar de que las organizaciones han implementado los sistemas de reciclaje, aún existe desconocimiento por parte de las personas sobre cómo separar los residuos.  Debido a esto es importante buscar maneras de cómo clasificar los residuos efectivamente. La solución propuesta consiste en la implementación de una aplicación que indica donde depositar los items a reciclar.  Las organizaciones pueden utilizar esta aplicación en un dispositivo móvil que se encuentre cerca de los contenedores y así las personas sólo tendrían que tomar una foto del item. Además las personas podrían instalar la aplicación en sus teléfonos de tal manera que puedan desechar los residuos en otros contenedores.
+
+### 2. Procesamiento de datos 
+
+El conjunto de datos se encuentra en el sitio web de Kaggle [(Garbage classification)](https://www.kaggle.com/asdasdasasdas/garbage-classification). La data consiste en 2477 imágenes pertenecientes a 6 categorias. Las imágenes tienen un tamaño de 512 x 384 pixeles. La tabla 1 detalla el número total de imágenes por cada clase. 
+
+```{r echo=FALSE}
+clase <- c("trash", "glass","metal","paper","plastic","cardboard")
+npics <- c(137, 491,400,584,472,393)
+
+df_resumen <- data.frame(clase,npics)
+
+df_resumen  %>%
+  kbl(col.names=c("Categorías","No. de imágenes"), align=rep('r', 5), caption = "Tabla 1. Resumen de datos.") %>%
+  kable_styling(full_width = F)
+```
+Posteriormente, se procedió a dividir el conjunto de datos en dos partes (80/20) para el entrenamiento (train) y prueba (test) del modelo. La tabla 2 presenta los dos conjuntos de datos obtenidos después de la partición. Se puede evidenciar que la mayoría de las clases presentan un número similar de muestras para el conjunto de entrenamiento, excepto por la categoría "trash" como se muestra en la Figura 1.
+
+
+<div class = "row">
+<div class = "col-md-4">
+```{r echo=FALSE}
+Class <- c("trash", "glass","metal","paper","plastic","cardboard")
+Train <- c(117, 351,348,494,370,342)
+Test <- c(20, 150,62,100,112,61)
+
+df <- data.frame(Class, Train, Test)
+df  %>%
+  kbl(align=rep('r', 5), caption = "Tabla 2. División de datos") %>%
+  add_header_above(c(" ", "Partición" = 2)) %>%
+  kable_styling(full_width = F)
+```
+</div>
+
+<div class = "col-md-8">
+```{r echo=FALSE, fig.width=6,fig.height=4}
+p <- ggplot(df, aes(x = Class, y = Train, fill = Class)) +  
+  geom_bar(stat = "identity") +
+  theme_minimal(base_size = 14) + 
+  theme(legend.position="none",axis.line = element_line(colour = "black"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), plot.title = element_text(margin=margin(5,0,30,0), size = 12, face = "bold",hjust = 0.5, colour = "#686868"))
+p + labs(y= "Frequencies", x = "Classes") + ggtitle("Figura 1. Frecuencias absolutas para el conjunto de datos train.") + scale_fill_manual(values=c("#89A4C7", "#B5CFD8", "#7393A7","#CDD5E0","#6C737E","#F5B17B"))
+```
+</div>
+</div>
+
+Dado que el conjunto de datos no estaba balanceado se generaron nuevas muestras para la clase "trash". Para esto se utilizó la técnica de data augmentation que consiste en modificar la apariencia de la imágen en base a ciertas propiedades. En total se realizaron 6 transformaciones sobre un subconjunto de 40 imágenes. Dichas transformaciones consistían en rotar imagen, ajustar contraste, ajustar brillo y recortar imagen. Como resultado se adicionaron 240 imágenes a la clase "trash" dando un total de 357 imágenes. Finalmente, el tamaño del conjunto de datos para el entrenamiento se incrementa a 2767 imágenes, mientras que el conjunto de prueba contiene 505 imágenes.
+
+### 3. Solución del problema
+
+El problema a resolver es de clasificación de imágenes las cuales se encuentran almacenadas en directorios que permiten distinguer las clases. La solución propuesta utiliza _redes neuronales convolucionales_ para generar un modelo capaz de predecir el tipo de material de un ítem dada una imagen. En particular, se utiliza la técnica de _transfer learning_ que involucra el uso de un modelo pre-entrenado para facilitar el aprendizaje sobre las distintas características de las imágenes. Después se aplica la técnica de _fine tuning_ sobre las últimas capas del modelo pre-entrenado para mejorar el desempeño del modelo y evitar el sobreajuste.
+
+
+### 4. Entrenamiento y ajuste de hiperparámetros
+
+Previo al entrenamiento del modelo, se creó el conjunto de datos para validación considerando el 20% de las muestras del conjunto de datos de entrenamiento. Asimismo, se realizó la conversión de las etiquetas (clases) en un formato binario utilizando el método _One Hot Encoding_. Por otro lado, se aplicó un método de _data augmentation_ sobre el conjunto de datos train para generar distintas muestras durante el entrenamiento. En particular, se realizan 7 transformaciones de forma aleatoria como rotar, voltear, y aumentar zoom. En cuanto al modelo pre-entrenado, se seleccionó el modelo [ResNet50V2](https://keras.io/api/applications/resnet/#resnet50v2-function) para aplicar la técnica transfer learning en el conjunto de datos.
+
+En cuanto a los hiperparámetros, se seleccionó los siguientes valores para construir el modelo: un batch_size de 32, y un número de epochs de 50. Se realizó pruebas con varios optimizadores incluyendo Adam y RMS, pero el mejor resultado se obtuvo utilizando SGD (Stochastic gradient descent) con una tasa de aprendizaje (learning rate) de 1e-4.
+
+
+### 5. Construcción del modelo
+
+La construcción del modelo se realizó en varias fases en las cuales se evaluaron diferentes técnicas. En particular, se crearon modelos combinando 3 técnicas: _data augmentation_, _transfer learning_ y _fine tuning_. Además, se utilizó el callback _EarlyStopping_ para detener el entrenamiento del modelo cuando ya no exista mejora en su desempeño. La tabla 3 presenta el resumen de los modelos evaluados y los valores obtenidos para las métricas de accuracy y loss. Primero, se generó un modelo simple que consistía en una red neuronal convolucional de 5 capas utilizando data augmentation. Se puede observar que este modelo tiene pocos parámetros (60.212) con respecto a los otros modelos evaluados. Sin embargo, al utilizar esta arquitectura se obtiene un menor valor de accuracy (0.5425) y un valor de loss alto (1.0707), lo cual sugiere el uso de otras técnicas como el uso de modelos pre-entrenados para mejorar el rendimiento del modelo. Segundo, se crearon modelos utilizando ResNet50V2 en los cuales se obtuvo valores de accuracy superiores a 0.80 y valores de loss menores a 0.55. La diferencia en los modelos se centra en aplicar o no las técnicas mencionadas, lo cual se puede evidenciar en el número de parámetros a entrenar así como también en los valores obtenidos para las distintas métricas. Es importante mencionar que los modelos basados en ResNet50V2 aplican capas Dropout así como también el método de regularización L2 (ridge regression). Los modelos que utilizan dos de las tres técnicas obtienen valores de precisión (accuracy) cercanos a 0.83. El segundo modelo obtiene un loss de 0.47 utilizando sólo data augmentation, el cual se considera un buen modelo pero aún requiere mejoras en términos de accuracy. En el caso del tercer modelo, se observa que usar solo fine tuning sin data augmentation incrementa la pérdida (loss) a 0.51. Finalmente, el mejor modelo se obtuvo al aplicar las 3 técnicas en conjunto. Los resultados muestran que este modelo se desempeña mejor en la tarea de clasificación al obtener valores de accuracy y loss de 0.8435 y 0.4766, respectivamente.
+
+```{r echo=FALSE}
+modelo <- c("Arquitectura simple - data augmentation", "ResNet50V2 - data augmentation - no fine tuning","ResNet50V2 - no data augmentation - fine tuning","ResNet50V2 - data augmentation - fine tuning")
+params <- c("60.212", "23.614.126","23.614.126","23.614.126")
+trainable <- c("60.212", "49.326","3.465.390","3.465.390")
+nontrainable <- c("0", "23.564.800","20.148.736","20.148.736")
+accuracy <- c(0.5425, 0.8316,0.8376,0.8435)
+loss <- c(1.0707, 0.4795,0.5100,0.4766)
+
+df <- data.frame(modelo, params, trainable,nontrainable,accuracy,loss)
+df  %>%
+  kbl(col.names=c("Model","Params","Trainable params","Non-trainable params","Accuracy","Loss"), align=rep('l', 6), caption = "Tabla 3. Comparación de modelos creados a partir de combinar técnicas.") %>%
+  kable_styling(full_width = F)
+```
+
+La Figura 2 presenta a mayor detalle la arquitectura creada para clasificar los residuos a reciclar. Al utilizar un modelo pre-entrenado es importante que la imágen tenga las mismas dimensiones. En particular, ResNet50V2 funciona con imágenes de tamaño 224 x 224 pixeles. Por lo tanto, se realiza un redimensionamiento de las imágenes previo al entrenamiento. Por otro lado, la solución propuesta emplea la técnica fine tuning la cual involucra entrenar cierto número de capas (trainable-layers) del modelo pre-entrenado por lo que estas pueden aprender otras características sobre el conjunto de imágenes. En particular, se realiza un entrenamiento sobre las 10 últimas capas de ResNet50V2. Finalmente, se agregan tres capas (pooling layer, dense layer y output) para reducir el tamaño de las salidas y así obtener una salida de tamaño 6 (número de clases).
+
+<div>
+<p align="center">
+  <p class="caption_html">Figura 2. Arquitectura creada para clasificar residuos</p>
+  <img src="images/cnn-architecture.png">
+</p>
+</div>
+
+
+### 6. Resultados finales 
+
+Esta sección describe los resultados obtenidos para el modelo propuesto. La figura 3 presenta la exactitud (accuracy) del modelo en función del número de épocas (epochs). Los resultados muestran un incremento de la exactitud a lo largo de las iteraciones. En particular, el conjunto de datos de prueba (validation) obtiene un accuracy de 0.4 al inicio, el cual se incrementa gradualmente hasta alcanzar un valor de 0.84. Una tendencia similar se obtiene para el conjunto de datos de entrenamiento (train), el cual obtiene un valor inicial de 0.3 hasta alcanzar un accuracy de 0.83. La figura 4 presenta la pérdida (loss) en función de las epocas. Para ambos conjuntos de datos, se obtienen valores de pérdida superiores a 1, sin embargo a lo largo de las épocas se consigue una notable mejoria en el modelo al alcanzar valores cercanos 0.4 para ambos conjuntos de datos.
+
+
+```{r echo=FALSE, fig.align='center', fig.width=8, fig.height=3.5}
+
+acc <- c(0.26257601380348206, 0.40851297974586487, 0.47042563557624817, 0.5080154538154602, 0.5572139024734497, 0.5760088562965393, 0.5909342169761658, 0.6318408250808716, 0.6500829458236694, 0.6445550322532654, 0.6710889935493469, 0.6744057536125183, 0.6887783408164978, 0.6865671873092651, 0.6909894943237305, 0.6981757879257202, 0.7247098088264465, 0.7224985957145691, 0.7330016493797302, 0.7385295629501343, 0.7330016493797302, 0.745715856552124, 0.7495853900909424, 0.7562189102172852, 0.7672747373580933, 0.7810945510864258, 0.7523493766784668, 0.7877280116081238, 0.7589828372001648, 0.7860696315765381, 0.780541718006134, 0.7877280116081238, 0.7910447716712952, 0.7932559251785278, 0.8009950518608093, 0.7871752381324768, 0.803758978843689, 0.8043117523193359, 0.8131564259529114, 0.8148148059844971, 0.8021005988121033, 0.8203427195549011, 0.8231067061424255, 0.8131564259529114, 0.8280817866325378, 0.8148148059844971, 0.8186843395233154, 0.832504153251648, 0.8407959938049316, 0.8463239073753357)
+val_acc<- c(0.41721853613853455, 0.5121412873268127, 0.5320088267326355, 0.5894039869308472, 0.6490066051483154, 0.6445916295051575, 0.6909492015838623, 0.7174392938613892, 0.7041942477226257, 0.7240617871284485, 0.7218543291091919, 0.7417218685150146, 0.7461368441581726, 0.7615894079208374, 0.7682119011878967, 0.7770419716835022, 0.7770419716835022, 0.7858719825744629, 0.7836644649505615, 0.7924944758415222, 0.7947019934654236, 0.7991169691085815, 0.8145695328712463, 0.796909511089325, 0.8035320043563843, 0.823399543762207, 0.8211920261383057, 0.8013244867324829, 0.8057395219802856, 0.8256070613861084, 0.8211920261383057, 0.823399543762207, 0.8035320043563843, 0.8167770504951477, 0.8256070613861084, 0.8256070613861084, 0.8278145790100098, 0.8145695328712463, 0.8278145790100098, 0.8189845681190491, 0.812362015247345, 0.8256070613861084, 0.8322295546531677, 0.8432670831680298, 0.8366445899009705, 0.8388521075248718, 0.8278145790100098, 0.8256070613861084, 0.8322295546531677, 0.8322295546531677)
+t<-c(1.8686164617538452, 1.4874759912490845, 1.3171625137329102, 1.2380987405776978, 1.1318371295928955, 1.0802818536758423, 1.0446316003799438, 0.9627901315689087, 0.9257331490516663, 0.9241749048233032, 0.8795717358589172, 0.8424068689346313, 0.83641117811203, 0.7922320365905762, 0.789135754108429, 0.7747477889060974, 0.741187334060669, 0.7347770929336548, 0.7288694381713867, 0.705704391002655, 0.7321199178695679, 0.6892048716545105, 0.6668990850448608, 0.6777365803718567, 0.6543266773223877, 0.6214393973350525, 0.648909866809845, 0.6133210062980652, 0.6191838383674622, 0.5970796942710876, 0.6018725633621216, 0.6015298962593079, 0.5617138147354126, 0.5678188800811768, 0.5692617297172546, 0.5656411647796631, 0.5666266083717346, 0.5428352952003479, 0.5273116827011108, 0.5174515843391418, 0.5443183183670044, 0.5308225750923157, 0.5013952851295471, 0.5196613073348999, 0.49071285128593445, 0.4983797073364258, 0.5047751665115356, 0.46645915508270264, 0.4608273208141327, 0.47335314750671387)
+v<-c(1.493232250213623, 1.2882845401763916, 1.157531499862671, 1.0602810382843018, 0.9789993166923523, 0.9239838719367981, 0.8667013645172119, 0.8227364420890808, 0.7938701510429382, 0.7708757519721985, 0.7436369061470032, 0.7203506827354431, 0.7020503878593445, 0.6754270195960999, 0.6566773056983948, 0.6410239338874817, 0.6272680163383484, 0.6172399520874023, 0.6129927039146423, 0.58656907081604, 0.586120069026947, 0.5744695663452148, 0.5598640441894531, 0.557608425617218, 0.5513507723808289, 0.5433453321456909, 0.5257605314254761, 0.5351449251174927, 0.5271162986755371, 0.5113203525543213, 0.5182057023048401, 0.5036792755126953, 0.5307931900024414, 0.5150732398033142, 0.48961663246154785, 0.48493486642837524, 0.48593413829803467, 0.4820331037044525, 0.47006839513778687, 0.47435247898101807, 0.49627140164375305, 0.4728432595729828, 0.48372840881347656, 0.4655868113040924, 0.4738217890262604, 0.4493328630924225, 0.4611666202545166, 0.45542165637016296, 0.44806504249572754, 0.4483371078968048)
+
+x <- 1:50;
+df <- data.frame(
+  x = c(x, x), y = c(t, v),
+  grp = as.factor(rep(c("training", "validation"), each = 50))
+  )
+
+df_acc <- data.frame(
+  x = c(x, x), y = c(acc, val_acc),
+  grp = as.factor(rep(c("training accuracy", "validation accuracy"), each = 50))
+  )
+# Plot
+
+ggplot(data = df, aes(x, y, group = grp)) +  theme_bw() +
+  geom_line(aes(linetype = grp, color = grp), stat="identity", size=0.85)+
+  geom_point(aes(color=grp), size=0)+
+  theme(text = element_text(size=12), legend.title = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position = c(0.8, 0.86),legend.text=element_text(size=12),plot.title = element_text(margin=margin(0,0,15,0), size = 12, face = "bold",hjust = 0.5, colour = "#686868")) +
+  scale_linetype_manual(values=c("solid", "solid")) +
+  scale_colour_manual(values=c("#438CC0", "#FF943D")) +
+  labs(title="Figura 4. Loss vs epochs", y= "loss", x = "epoch") -> loss
+
+ggplot(data = df_acc, aes(x, y, group = grp)) +  theme_bw() +
+  geom_line(aes(linetype = grp, color = grp), stat="identity", size=0.85)+
+  geom_point(aes(color=grp), size=0)+
+  theme(text = element_text(size=12),legend.title = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position = c(0.72, 0.15),legend.text=element_text(size=12),plot.title = element_text(margin=margin(0,0,15,0), size = 12, face = "bold",hjust = 0.5, colour = "#686868")) +
+  scale_linetype_manual(values=c("solid", "solid")) +
+  scale_colour_manual(values=c("#438CC0", "#FF943D")) +
+  labs(title="Figura 3. Training and validation accuracy", y= "accuracy", x = "epoch") -> acc
+
+grid.arrange(acc, loss, ncol = 2)
+```
+
+ A continuación se reporta el desempeño del modelo para cada una de las métricas utilizadas en problemas de clasificación. La tabla 3 presenta el reporte de clasificación para el modelo obtenido. En términos de precisión (precision), se puede observar que en la mayoria de los casos el modelo predice correctamente las clases (un 80% de las veces), a excepción de la clase "metal" en la cual el modelo predice con un 72% de precisión. Para el caso de la exhaustividad (recall), se observa un comportamiento similar con valores superiores a 80%. Por otro lado, el modelo es capaz de identificar un 74% de las muestras que pertenecen a la clase "glass". En general, los resultados indican que el modelo puede predecir correctamente para la mayoría de los casos.
+ 
+```{r echo=FALSE}
+#https://stackoverflow.com/a/49656650
+classes <- c("trash", "glass","metal","paper","plastic","cardboard","","**accuracy**","**macro avg**","**weighted avg**")
+precision <- c(0.80,0.88,0.72,0.88,0.82,0.92,'','',0.84,0.85)
+recall <- c(0.80,0.74,0.87,0.91,0.89,0.89,'','',0.85,0.84)
+f1score <- c(0.80,0.80,0.79,0.90,0.85,0.90,'',0.84,0.84,0.84)
+support <- c(20,150,62,100,112,61,'',505,505,505)
+
+df_classification <-data.frame(classes,precision,recall,f1score,support)
+df_classification  %>%
+  kbl(col.names=c("class","precision","recall","f1-score","support"), align=rep('r', 5), caption = "Tabla 3. Reporte de clasificación.") %>%
+  kable_styling(full_width = F)
+```
+
+La Figura 5 presenta la matriz de confusión obtenida por el modelo utilizando el conjunto de datos de prueba. En general, se puede observar que el modelo predice correctamente para cada una de las clases, lo cual es consistente con los resultados presentados anteriormente. Se puede distinguir que en ciertos casos, el modelo tiende a predecir clases de tipo "glass" como "plastic" y viceversa. Por ejemplo, 18 muestras de clase "glass" como "plastic" y 10 muestras de clase "plastic" como "glass". Asimismo se observa que el modelo predice en ciertos casos muestras clase "glass" como "metal" (17 muestras). Una posible explicación para estos resultados es por el brillo y contraste en las imágenes que puede causar confusión al determinar el material (clase) del ítem.
+
+```{r echo=FALSE, fig.align='center',fig.width=8, fig.height=3.5}
+dat <- matrix(c(16,0,2,2,0,0,
+                0,111,5,0,10,0,
+                0,17,54,2,2,0,
+                1,4,0,91,0,7,
+                3,18,1,0,100,0,
+                0,0,0,5,0,54),ncol=6, nrow=6)
+rownames(dat) <- c("trash","glass","metal","paper","plastic","cardboard")
+colnames(dat) <- c("trash","glass","metal","paper","plastic","cardboard") 
+
+dat %>% 
+  #t %>%
+  as.data.frame() %>%
+  rownames_to_column("observations") %>%
+  pivot_longer(!c(observations), names_to = "predictions", values_to = "counts") %>%
+  mutate(predictions= fct_relevel(predictions,colnames(dat))) %>%
+  mutate(observations= fct_relevel(observations,c("cardboard","plastic","paper","metal","glass","trash"))) %>%
+  ggplot(aes(x=predictions, y=observations, fill=counts)) + 
+  geom_raster() + 
+  geom_tile(colour = "black") +
+  geom_text(aes(label=counts)) +
+  ggtitle("Figura 5. Matriz de confusión.") +
+  theme(plot.title = element_text(margin=margin(0,0,15,0), size = 12, face = "bold",hjust = 0.5, colour = "#686868")) +
+   scale_fill_gradient(low = "#EEEEEE", high = "#87A8D0", limit = c(0, 120), na.value = NA)
+
+```
+
+### 7. Conclusiones
+
+* El modelo puede clasificar los items a reciclar con una exactitud del 84%.
+* La solución propuesta utiliza técnicas como data augmentation, transfer learning y fine tuning las cuales permiten obtener mejores resultados en el entrenamiento del modelo.
+* El uso de técnicas de regularización como las capas Dropout y L2 fue útil para reducir el sobreajuste en el modelo.
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
